@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Telegram Shop Mini App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body class="bg-white">
+    <div id="app"></div>
+
+    <script>
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+
+      const product = {
+        id: 1,
+        title: "Худи Oversize",
+        price: 3500,
+        image:
+          "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
+      };
+
+      let screen = "store";
+      let cart = [];
+
+      function render() {
+        const app = document.getElementById("app");
+
+        if (screen === "store") {
+          app.innerHTML = `
+            <div class="max-w-sm mx-auto min-h-screen bg-white p-4">
+              <h1 class="text-xl font-semibold mb-4">StreetWear Store</h1>
+
+              <div class="border rounded-2xl overflow-hidden cursor-pointer" onclick="openProduct()">
+                <img src="${product.image}" class="h-56 w-full object-cover" alt="${product.title}">
+                <div class="p-4">
+                  <h2 class="text-lg font-medium">${product.title}</h2>
+                  <p class="text-gray-500 mt-1">${product.price} ₽</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (screen === "product") {
+          app.innerHTML = `
+            <div class="max-w-sm mx-auto min-h-screen bg-white p-4">
+              <button class="mb-3 text-sm" onclick="goStore()">← Назад</button>
+
+              <img src="${product.image}" class="w-full h-72 object-cover rounded-2xl" alt="${product.title}">
+              <h2 class="text-xl font-semibold mt-4">${product.title}</h2>
+              <p class="text-gray-500 mt-1">${product.price} ₽</p>
+
+              <div class="mt-4 flex gap-2">
+                <button class="border rounded-xl px-3 py-2">S</button>
+                <button class="border rounded-xl px-3 py-2">M</button>
+                <button class="border rounded-xl px-3 py-2">L</button>
+              </div>
+
+              <button
+                class="mt-6 w-full bg-black text-white py-3 rounded-2xl"
+                onclick="addToCart()"
+              >
+                Купить
+              </button>
+            </div>
+          `;
+        }
+
+        if (screen === "cart") {
+          const items = cart
+            .map(
+              (item) => `
+                <div class="border rounded-xl p-3 mt-3">
+                  ${item.title} — ${item.price} ₽
+                </div>
+              `
+            )
+            .join("");
+
+          const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+          app.innerHTML = `
+            <div class="max-w-sm mx-auto min-h-screen bg-white p-4">
+              <button class="mb-3 text-sm" onclick="goStore()">← Назад</button>
+              <h2 class="text-xl font-semibold">Корзина</h2>
+
+              ${items || '<p class="text-gray-500 mt-4">Корзина пуста</p>'}
+
+              <div class="mt-4 text-lg font-semibold">Итого: ${total} ₽</div>
+
+              <button
+                class="mt-6 w-full bg-black text-white py-3 rounded-2xl"
+                onclick="goCheckout()"
+              >
+                Оформить заказ
+              </button>
+            </div>
+          `;
+        }
+
+        if (screen === "checkout") {
+          app.innerHTML = `
+            <div class="max-w-sm mx-auto min-h-screen bg-white p-4">
+              <button class="mb-3 text-sm" onclick="goCart()">← Назад</button>
+              <h2 class="text-xl font-semibold">Оформление заказа</h2>
+
+              <input
+                id="name"
+                class="w-full border rounded-xl p-3 mt-4"
+                placeholder="Имя"
+              />
+              <input
+                id="phone"
+                class="w-full border rounded-xl p-3 mt-3"
+                placeholder="Телефон"
+              />
+
+              <button
+                class="mt-6 w-full bg-black text-white py-3 rounded-2xl"
+                onclick="submitOrder()"
+              >
+                Подтвердить заказ
+              </button>
+            </div>
+          `;
+        }
+
+        if (screen === "success") {
+          app.innerHTML = `
+            <div class="max-w-sm mx-auto min-h-screen bg-white p-4 flex flex-col justify-center">
+              <h2 class="text-2xl font-semibold">Заказ отправлен ✅</h2>
+              <p class="text-gray-500 mt-2">Продавец скоро свяжется с клиентом.</p>
+
+              <button
+                class="mt-6 w-full bg-black text-white py-3 rounded-2xl"
+                onclick="goStore()"
+              >
+                Вернуться в магазин
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      function openProduct() {
+        screen = "product";
+        render();
+      }
+
+      function goStore() {
+        screen = "store";
+        render();
+      }
+
+      function addToCart() {
+        cart.push(product);
+        screen = "cart";
+        render();
+      }
+
+      function goCart() {
+        screen = "cart";
+        render();
+      }
+
+      function goCheckout() {
+        screen = "checkout";
+        render();
+      }
+
+      function submitOrder() {
+        const name = document.getElementById("name")?.value || "";
+        const phone = document.getElementById("phone")?.value || "";
+
+        console.log("Новый заказ:", {
+          name,
+          phone,
+          items: cart,
+        });
+
+        if (tg) {
+          tg.HapticFeedback?.notificationOccurred("success");
+        }
+
+        cart = [];
+        screen = "success";
+        render();
+      }
+
+      render();
+    </script>
+  </body>
+</html>
