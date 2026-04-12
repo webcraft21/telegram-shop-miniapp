@@ -389,8 +389,9 @@
           .join(", ");
 
         const payload = {
-          name: name || tgname || "Без имени",
-          phone: phone || tgname || "Не указан",
+          name: name || "Без имени",
+          phone: phone || "Не указан",
+          tgname: tgname || "",
           items: `${itemsText}${comment ? ` | Комментарий: ${comment}` : ""}`,
         };
 
