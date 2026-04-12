@@ -20,6 +20,9 @@
         tg.expand();
       }
 
+      const SUPABASE_URL = "https://ksmycnupavkipgscjqym.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbXljbnVwYXZraXBnc2NqcXltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5ODQ5MDcsImV4cCI6MjA5MTU2MDkwN30.ggrrgysNbeVIF77DgbxbijSDrEq9-IXP5b4v8sSzgp0";
+
       const products = [
         {
           id: 1,
@@ -81,12 +84,29 @@
                   ? `<button class="text-sm rounded-xl border border-neutral-200 px-3 py-2" onclick="goTo('${backTarget}')">Назад</button>`
                   : ""
               }
-              <div>
-                <div class="text-lg font-semibold">${title}</div>
-              </div>
+              <div class="text-lg font-semibold">${title}</div>
             </div>
           </div>
         `;
+      }
+
+      function renderProductGrid(items) {
+        return items
+          .map(
+            (product) => `
+            <div class="rounded-3xl overflow-hidden bg-white border border-neutral-200 shadow-sm cursor-pointer" onclick="openProduct(${product.id})">
+              <div class="h-48 bg-neutral-100">
+                <img src="${product.image}" alt="${product.title}" class="w-full h-full object-cover" />
+              </div>
+              <div class="p-3">
+                <div class="text-xs text-neutral-500">${product.category}</div>
+                <div class="font-medium mt-1 leading-5">${product.title}</div>
+                <div class="mt-2 font-semibold">${formatPrice(product.price)}</div>
+              </div>
+            </div>
+          `
+          )
+          .join("");
       }
 
       function renderStore() {
@@ -127,25 +147,6 @@
 
           ${renderBottomBar()}
         `;
-      }
-
-      function renderProductGrid(items) {
-        return items
-          .map(
-            (product) => `
-            <div class="rounded-3xl overflow-hidden bg-white border border-neutral-200 shadow-sm cursor-pointer" onclick="openProduct(${product.id})">
-              <div class="h-48 bg-neutral-100">
-                <img src="${product.image}" alt="${product.title}" class="w-full h-full object-cover" />
-              </div>
-              <div class="p-3">
-                <div class="text-sm text-neutral-500">${product.category}</div>
-                <div class="font-medium mt-1 leading-5">${product.title}</div>
-                <div class="mt-2 font-semibold">${formatPrice(product.price)}</div>
-              </div>
-            </div>
-          `
-          )
-          .join("");
       }
 
       function renderProduct() {
@@ -377,25 +378,53 @@
         render();
       }
 
-      function submitOrder() {
+      async function submitOrder() {
         const name = document.getElementById("name")?.value || "";
         const phone = document.getElementById("phone")?.value || "";
         const tgname = document.getElementById("tgname")?.value || "";
         const comment = document.getElementById("comment")?.value || "";
 
-        console.log("Новый заказ:", {
-          name,
-          phone,
-          tgname,
-          comment,
-          items: cart,
-        });
+        const itemsText = cart
+          .map((item) => `${item.title}${item.size ? ` (${item.size})` : ""}`)
+          .join(", ");
 
-        if (tg) tg.HapticFeedback?.notificationOccurred("success");
+        const payload = {
+          name: name || tgname || "Без имени",
+          phone: phone || tgname || "Не указан",
+          items: `${itemsText}${comment ? ` | Комментарий: ${comment}` : ""}`,
+        };
 
-        cart = [];
-        screen = "success";
-        render();
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              Prefer: "return=representation",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("Supabase error:", errorText);
+            alert("Ошибка при отправке заказа");
+            return;
+          }
+
+          const data = await res.json();
+          console.log("Заказ сохранён:", data);
+
+          if (tg) tg.HapticFeedback?.notificationOccurred("success");
+
+          cart = [];
+          screen = "success";
+          render();
+        } catch (error) {
+          console.error("Network error:", error);
+          alert("Ошибка сети");
+        }
       }
 
       function goTo(target) {
